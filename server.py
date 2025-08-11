@@ -86,7 +86,11 @@ Use Record ID field to RECORD_ID() for accurate IDs. Verify ID before updates. I
 
 Task Creation
 If user refers to a task, don’t store it in memory—check Airtable for a matching task, then update with provided info. If no match, create a new task. Never suggest tasks not in Airtable unless tied to existing ones."""
-client = OpenAI(api_key=XAI_API_KEY, base_url="https://api.x.ai/v1")
+client = OpenAI(
+    api_key=XAI_API_KEY,
+    base_url="https://api.x.ai/v1",
+    http_client=None  # Force default client without proxies
+)
 tools = [
     {
         "type": "function",
