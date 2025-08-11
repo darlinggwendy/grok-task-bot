@@ -169,6 +169,7 @@ def chat_with_grok(user_message, messages=[]):
         messages.append({"role": "assistant", "content": "", "tool_calls": [tool_call]})
         messages.append({"role": "tool", "content": str(tool_response), "tool_call_id": tool_call.id})
         return chat_with_grok("", messages)
+    messages.append({"role": "assistant", "content": response.choices[0].message.content})
     return response.choices[0].message.content
 app = Flask(__name__)
 HTML_TEMPLATE = """
@@ -209,8 +210,15 @@ def load_messages():
     except FileNotFoundError:
         return []
 def save_messages(messages):
+    # Convert non-serializable objects to dictionaries
+    serializable_messages = []
+    for msg in messages:
+        msg_dict = msg.copy()  # Create a copy to avoid modifying the original
+        if "tool_calls" in msg_dict and msg_dict["tool_calls"]:
+            msg_dict["tool_calls"] = [{"id": tc.id, "type": tc.type, "function": tc.function.__dict__} for tc in msg_dict["tool_calls"]]
+        serializable_messages.append(msg_dict)
     with open("messages.json", "w") as f:
-        json.dump(messages, f)
+        json.dump(serializable_messages, f)
 messages = load_messages()
 @app.route('/healthz')
 def health_check():
@@ -222,8 +230,8 @@ def index():
         user_message = request.form["message"]
         messages.append({"role": "user", "content": user_message})
         reply = chat_with_grok(user_message, messages)
-        messages.append({"role": "bot", "content": reply})
-        save_messages(messages)
+        messages.append({"role": "assistant", "content": reply})
+        save_messages(messages)  # Save only serializable data
     return render_template_string(HTML_TEMPLATE, messages=messages)
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
